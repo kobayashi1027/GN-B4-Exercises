@@ -2,6 +2,7 @@
 require './TwitterBot.rb' # TwitterBot.rbの読み込み
 require 'rexml/document'  # XMLファイル処理用
 require 'open-uri'        # httpのURLを普通のファイルのように扱うため
+require "date"            # 日付の取得
 
 #---------- MyTwitterBot ----------                                                                         
 class MyTwitterBot < TwitterBot
@@ -25,35 +26,49 @@ class MyTwitterBot < TwitterBot
 
 
   #
-  # （とりあえず）1週間の岡山県南部の天気をツイートする．
+  # 今日と明日の岡山県南部の天気をツイートする．
+  # 4/11追記...このままでは，以前の天気予報と全く同じ内容の場合，ツイートされない？
+  # その日の日付等ユニークな情報も加える必要がある．
   #
   def whether_tweet
     #a = `curl http://www.drk7.jp/weather/xml/33.xml`
-    #puts a
+
+    # 年月日の取得
+    d = Date.today
+    today = d.strftime("%Y/%m/%d")
+    tomorrow = (d+1).strftime("%Y/%m/%d")
+
+    output = ""
 
     open("http://www.drk7.jp/weather/xml/33.xml") {|f|
       doc = REXML::Document.new(f)
-      #puts doc
-      #puts doc.elements['weatherforecast/pref/area[2]/info/weather'].text
-
-      output = ''
       
       doc.elements.each('weatherforecast/pref/area[2]/info') do |element|
         date =  element.attributes["date"]
-        weather =  element.elements['weather'].text
+        weather = element.elements['weather'].text
 
-        #puts date + " " + weather
-        output << date + " " + weather + "\n"
+        if date == today
+          output += "今日の天気は" + weather + "でしょう．\n"
+        elsif date == tomorrow
+          output += "明日の天気は" + weather + "でしょう．\n"
+        end
 
       end
       
+    }
+    
+    if output != ""
       print(output)
       #tweet(output)
-    }
+    end
     
   end
 
-
+  
+  #
+  # 何しようか
+  #
+  
 
 
 
