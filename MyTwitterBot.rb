@@ -78,3 +78,11 @@ end
 bottest = MyTwitterBot.new
 #bottest.timeline_tweet
 bottest.whether_tweet
+
+
+
+# 参考文献
+# http://blogaomu.com/2012/09/16/ruby-script-using-google-calendar-api
+# http://alice345.hatenablog.com/entry/2013/07/26/180900
+# http://doruby.kbmj.com/trinityt_on_rails/20081022/Ruby_Google_
+# http://qiita.com/iron-breaker/items/2440c4ab41a482b1b096
