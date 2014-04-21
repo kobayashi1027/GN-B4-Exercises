@@ -13,6 +13,23 @@ class MyTwitterBot < TwitterBot
   # 機能を追加
 
   #
+  # ツイートしようとした文字列が140文字を超えている場合のエラー処理を含むtweet
+  # ./TwitterBot.rb のtweetメソッドのオーバライドである．
+  #
+  def tweet(message)
+    if message.length > 140
+      puts message.length
+      print("Error! message is over 140 characters.\n")
+    else
+      @access_token.post(
+        '/statuses/update.json',
+        'status' => message
+      )
+    end
+  end
+
+
+  #
   # "「xxx」と言って"という文章を含むツイートがタイムライン上にある場合，
   # "xxx"とツイートする．
   #
@@ -20,8 +37,8 @@ class MyTwitterBot < TwitterBot
     timeline = get_tweet
 
     timeline.each do |var|
-      if /「(.+)」と言って/ =~ var["message"]   # "「xxx」と言って"があれば
-        tweet($1)                             # "xxx"とツイート
+      if /「(.+)」と言って/ =~ var["message"]
+        tweet($1)
         #puts $1
       end
     end
@@ -44,7 +61,10 @@ class MyTwitterBot < TwitterBot
 
     output = ""
 
-    open("http://www.drk7.jp/weather/xml/33.xml") {|f|
+    # XMLファイルを開き，今日明日の天気を取り出す
+    #open("http://www.drk7.jp/weather/xml/33.xml") {|f|
+    begin
+      f = open("http://www.drk7.jp/weather/xml/33.xml")
       doc = REXML::Document.new(f)
       
       doc.elements.each('weatherforecast/pref/area[2]/info') do |element|
@@ -58,19 +78,24 @@ class MyTwitterBot < TwitterBot
         end
 
       end
-      
-    }
+
+    rescue
+      # xmlファイルを開けなかった時のエラー処理
+      print("Failed open XML file.\n")
+    end
+    #}
     
+    # 天気が取得できていればツイート
     if !(output.empty?)
       print(output)
-      #tweet(output)
+      tweet(output)
     end
     
   end
 
   
   #
-  # カレンダー情報の取得
+  # 何かGNグループの予定が3日後にあればツイート
   #
   def calender
 
@@ -85,7 +110,7 @@ class MyTwitterBot < TwitterBot
     client.authorization.access_token = oauth_yaml["access_token"]
     
     # access_tokenの再取得
-    # ※client.authorization.expired? が常にfalseを返すので意味がない？
+    # ※client.authorization.expired? が常にfalseを返すのでこれは意味がない？
     #if client.authorization.refresh_token && client.authorization.expired?
     #  client.authorization.fetch_access_token!
     #end
@@ -114,7 +139,7 @@ class MyTwitterBot < TwitterBot
     
     result = client.execute(:api_method => cal.events.list,
                             :parameters => params)
-
+    
     # イベントの格納
     events = []
     result.data.items.each do |item|
@@ -124,11 +149,11 @@ class MyTwitterBot < TwitterBot
     # 予定があれば出力
     if !(events.empty?)
       events.each do |event|
-        #printf("%s,%s\n",event.start.dateTime,event.summary)
         print(event.start.dateTime, event.summary, "\n")
-        tweet("GNグループの皆様，\n" + 
-              "3日後に" + event.summary + "があります．\n" + 
-              "お忘れなく．\n" + "小林Botがお伝えしました．")
+        output = "GNグループの皆様，\n" + 
+          "3日後に" + event.summary + "があります．\n" + 
+          "お忘れなく．\n" + "小林Botがお伝えしました．"
+        tweet(output)
       end
     end
     
@@ -142,7 +167,8 @@ end
 bottest = MyTwitterBot.new
 #bottest.timeline_tweet
 #bottest.whether_tweet
-bottest.calender
+#bottest.calender
+
 
 
 # 参考文献
