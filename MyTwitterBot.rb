@@ -13,24 +13,23 @@ class MyTwitterBot < TwitterBot
   # 機能を追加
 
   #
-  # ツイートしようとした文字列が140文字を超えている場合のエラー処理を含むtweet
+  # messageをtwitterにツイートする．
   # ./TwitterBot.rb のtweetメソッドのオーバライドである．
+  # botからのつぶやきとわかるように，メッセージの末尾に" by bot"をつける
+  # ツイートが(" by bot"込みで)140文字を超える場合，エラーメッセージを
+  # 標準出力に出力する．
   #
   def tweet(message)
-    if message.length > 140
-      puts message.length
-      print("Error! message is over 140 characters.\n")
+    if message.length > (140 - " by bot".length)
+      print("Error! tweet is over 140 characters.\n")
     else
-      @access_token.post(
-        '/statuses/update.json',
-        'status' => message
-      )
+      super(message + " by bot")
     end
   end
 
 
   #
-  # "「xxx」と言って"という文章を含むツイートがタイムライン上にある場合，
+  # タイムラインを受信し，"「xxx」と言って"という文章を含むツイートがある場合，
   # "xxx"とツイートする．
   #
   def timeline_tweet                          # メソッド名をもうちょっと．．．
@@ -47,12 +46,9 @@ class MyTwitterBot < TwitterBot
 
 
   #
-  # 今日と明日の岡山県南部の天気をツイートする．
-  # 4/11追記...このままでは，以前の天気予報と全く同じ内容の場合，ツイートされない？
-  # その日の日付等ユニークな情報も加える必要がある．
+  # プログラム起動日とその翌日の岡山県南部の天気をツイートする．
   #
   def whether_tweet
-    #a = `curl http://www.drk7.jp/weather/xml/33.xml`
 
     # 年月日の取得
     d = Date.today
@@ -61,10 +57,10 @@ class MyTwitterBot < TwitterBot
 
     output = ""
 
-    # XMLファイルを開き，今日明日の天気を取り出す
-    #open("http://www.drk7.jp/weather/xml/33.xml") {|f|
+    # XMLファイルを開き，天気を取り出す
     begin
       f = open("http://www.drk7.jp/weather/xml/33.xml")
+      #f = `curl http://www.drk7.jp/weather/xml/33.xml`
       doc = REXML::Document.new(f)
       
       doc.elements.each('weatherforecast/pref/area[2]/info') do |element|
@@ -74,7 +70,7 @@ class MyTwitterBot < TwitterBot
         if date == today
           output += "今日の天気は" + weather + "でしょう．\n"
         elsif date == tomorrow
-          output += "明日の天気は" + weather + "でしょう．\n"
+          output += "明日の天気は" + weather + "でしょう．"
         end
 
       end
@@ -95,9 +91,9 @@ class MyTwitterBot < TwitterBot
 
   
   #
-  # 何かGNグループの予定が3日後にあればツイート
+  # GNグループの予定が3日後にあればツイート
   #
-  def calender
+  def calender_tweet
 
     # Initialize OAuth 2.0 client
     # authorization
@@ -110,7 +106,7 @@ class MyTwitterBot < TwitterBot
     client.authorization.access_token = oauth_yaml["access_token"]
     
     # access_tokenの再取得
-    # ※client.authorization.expired? が常にfalseを返すのでこれは意味がない？
+    # ※client.authorization.expired? が常にfalseを返してる？
     #if client.authorization.refresh_token && client.authorization.expired?
     #  client.authorization.fetch_access_token!
     #end
@@ -131,7 +127,8 @@ class MyTwitterBot < TwitterBot
 
     # イベントの取得
     # calenderIdでカレンダーを指定（自分のはprimary）
-    params = {'calendarId' => 'swlabgn@gmail.com',
+    calender_yaml = YAML.load_file('calenderId.yaml')
+    params = {'calendarId' => calender_yaml["calenderId"],
       'orderBy' => 'startTime',
       'timeMax' => time_max,
       'timeMin' => time_min,
@@ -151,10 +148,11 @@ class MyTwitterBot < TwitterBot
       events.each do |event|
         print(event.start.dateTime, event.summary, "\n")
         output = "GNグループの皆様，\n" + 
-          "3日後に" + event.summary + "があります．\n" + 
-          "お忘れなく．\n" + "小林Botがお伝えしました．"
+          "3日後に" + event.summary + "があります．\n" + "お忘れなく．"
         tweet(output)
       end
+    else
+      print("No entry.\n")
     end
     
   end
@@ -167,7 +165,7 @@ end
 bottest = MyTwitterBot.new
 #bottest.timeline_tweet
 #bottest.whether_tweet
-#bottest.calender
+bottest.calender_tweet
 
 
 
