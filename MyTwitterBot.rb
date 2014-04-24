@@ -10,7 +10,6 @@ require 'time'
 
 #---------- MyTwitterBot ----------                                                                         
 class MyTwitterBot < TwitterBot
-  # 機能を追加
 
   #
   # messageをtwitterにツイートする．
@@ -21,7 +20,11 @@ class MyTwitterBot < TwitterBot
   #
   def tweet(message)
     if message.length > (140 - " by bot".length)
-      print("Error! tweet is over 140 characters.\n")
+      print(<<STRING
+ERROR: Message is longer than 140 characters.
+       Couldn't tweet.
+STRING
+            )
     else
       super(message + " by bot")
     end
@@ -31,8 +34,9 @@ class MyTwitterBot < TwitterBot
   #
   # タイムラインを受信し，"「xxx」と言って"という文章を含むツイートがある場合，
   # "xxx"とツイートする．
+  # "「」"内が空の場合はツイートしない
   #
-  def timeline_tweet                          # メソッド名をもうちょっと．．．
+  def timeline_tweet                          # メソッド名の再考を．．．
     timeline = get_tweet
 
     timeline.each do |var|
@@ -48,7 +52,7 @@ class MyTwitterBot < TwitterBot
   #
   # プログラム起動日とその翌日の岡山県南部の天気をツイートする．
   #
-  def whether_tweet
+  def weather_tweet
 
     # 年月日の取得
     d = Date.today
@@ -77,13 +81,12 @@ class MyTwitterBot < TwitterBot
 
     rescue
       # xmlファイルを開けなかった時のエラー処理
-      print("Failed open XML file.\n")
+      print("ERROR: Couldn't get weather forecast.\n")
     end
-    #}
     
     # 天気が取得できていればツイート
     if !(output.empty?)
-      print(output)
+      #print(output)
       tweet(output)
     end
     
@@ -91,9 +94,9 @@ class MyTwitterBot < TwitterBot
 
   
   #
-  # GNグループの予定が3日後にあればツイート
+  # 3日後のGNグループの予定をツイート
   #
-  def calender_tweet
+  def schedule_tweet
 
     # Initialize OAuth 2.0 client
     # authorization
@@ -119,16 +122,16 @@ class MyTwitterBot < TwitterBot
     year = (d+3).year
     month = (d+3).month
     day = (d+3).day
-    print("3日後は", year, "-", month, "-", day, "\n")
+    #print("3日後は", year, "-", month, "-", day, "\n")
     
     # 時間を格納
     time_min = Time.utc(year, month, day, 0).iso8601
     time_max = Time.utc(year, month, day, 23, 59).iso8601
 
     # イベントの取得
-    # calenderIdでカレンダーを指定（自分のはprimary）
-    calender_yaml = YAML.load_file('calenderId.yaml')
-    params = {'calendarId' => calender_yaml["calenderId"],
+    # calendarIdでカレンダを指定（自分のはprimary）
+    calender_yaml = YAML.load_file('calendarId.yaml')
+    params = {'calendarId' => calender_yaml["calendarId"],
       'orderBy' => 'startTime',
       'timeMax' => time_max,
       'timeMin' => time_min,
@@ -146,7 +149,7 @@ class MyTwitterBot < TwitterBot
     # 予定があれば出力
     if !(events.empty?)
       events.each do |event|
-        print(event.start.dateTime, event.summary, "\n")
+        #print(event.start.dateTime, event.summary, "\n")
         output = "GNグループの皆様，\n" + 
           "3日後に" + event.summary + "があります．\n" + "お忘れなく．"
         tweet(output)
@@ -162,15 +165,7 @@ class MyTwitterBot < TwitterBot
 end
 
 
-bottest = MyTwitterBot.new
-#bottest.timeline_tweet
-#bottest.whether_tweet
-bottest.calender_tweet
-
-
-
-# 参考文献
-# http://blogaomu.com/2012/09/16/ruby-script-using-google-calendar-api
-# http://alice345.hatenablog.com/entry/2013/07/26/180900
-# http://doruby.kbmj.com/trinityt_on_rails/20081022/Ruby_Google_
-# http://qiita.com/iron-breaker/items/2440c4ab41a482b1b096
+bottweet = MyTwitterBot.new
+bottweet.timeline_tweet
+bottweet.weather_tweet
+bottweet.schedule_tweet
